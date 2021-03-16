@@ -1,0 +1,41 @@
+# ver 3.6 >= required: enable '-w' option for 'docker-compose exec'
+version: "3.8"
+
+networks:
+  # プロジェクト内仮想ネットワーク
+  ## 同一ネットワーク内の各コンテナはサービス名で双方向通信可能
+  appnet:
+    driver: bridge
+    # ネットワークIP範囲を指定する場合
+    # ipam:
+    #   driver: default
+    #   config:
+    #     # 仮想ネットワークのネットワーク範囲を指定
+    #     ## 172.68.0.0/16 の場合、172.68.0.1 ～ 172.68.255.254 のIPアドレスを割り振れる
+    #     ## ただし 172.68.0.1 はゲートウェイに使われる
+    #     - subnet: 172.68.0.0/16
+
+services:
+  # node service container: mcr.microsoft.com/playwright (node:14)
+  node:
+    build:
+      context: ./docker/node/
+      args:
+        # use current working user id
+        USER_ID: $USER_ID
+    logging:
+      driver: json-file
+    networks:
+      - appnet
+    ports:
+      # http://localhost:{NODE_PORT} => http://node:8099
+      - "${NODE_PORT:-8099}:8099"
+    # enable terminal
+    tty: true
+    volumes:
+      # ./ => docker:/work/
+      - ./:/work/
+    environment:
+      TZ: Asia/Tokyo
+      # playwright インストール時にブラウザダウンロードをスキップ
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
