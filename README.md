@@ -37,11 +37,49 @@ $ ./x init
         - Node.js service container
         - http://localhost:{NODE_PORT:-8099} => http://node:8099
 
-### Launch docker containers
+### Launch browserless server
 ```bash
 # Build up docker containers
 $ ./x build
 
-# Launch docker containers
+# Launch docker containers: launch browserless server
 $ ./x up -d
+
+# => Browserless server: http://localhost:{NODE_PORT:-8099}
+```
+
+***
+
+## Tips
+
+### 認証機能を付与したい場合
+```bash
+# .env に X_TOKEN 環境変数追加
+$ tee -a ./.env << \EOS
+X_TOKEN=8fa9a11f9dda130a5f83cc889915e3e0
+EOS
+
+# Restart server
+$ ./x restart
+```
+
+上記設定で起動した Browserless server に接続したい場合は、`?x-token={X_TOKEN}` クエリを付与して接続する必要がある
+
+```javascript
+const {chromium} = require('playwright');
+
+(async () => {
+  // Playwright CDP Server 接続: x-token 指定
+  const browser = await chromium.connect({
+    wsEndpoint: 'http://localhost:8099?x-token=8fa9a11f9dda130a5f83cc889915e3e0'
+  });
+  // ブラウザ操作
+  const page = await browser.newPage();
+  await page.goto('https://www.google.com', {waitUntil: 'networkidle'});
+  await page.screenshot({
+    path: `${__dirname}/google.com.png`,
+    fullPage: true,
+  });
+  browser.close();
+})();
 ```
