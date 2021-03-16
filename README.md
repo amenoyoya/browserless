@@ -23,8 +23,12 @@ $ ./x init
 |  |_ node/ # node service container
 |     |_ Dockerfile # node service container build setting file
 |
+|_ server/
+|  |_ index.js # Browserless server: http://node:8099
+|
 |_ .env # Dockerコンテナ実行ポート等の環境変数設定
 |_ docker-compose.yml # Docker構成設定
+|_ package.json # Node.js package settings
 |_ x # Docker環境構成・各種操作用スクリプト
 ```
 
@@ -35,15 +39,21 @@ $ ./x init
 - services:
     - **node**: `mcr.microsoft.com/playwright` (Node.js 14.x)
         - Node.js service container
-        - http://localhost:{NODE_PORT:-8099} => http://node:8099
+        - routes:
+            - HTTP, WebSocket: http://localhost:{NODE_PORT:-8099} => http://node:8099
+    - **proxy**: `steveltn/https-portal:1`
+        - Nginx proxy server with Let's encrypt SSL certificator container.
+        - routes:
+            - HTTP: http://localhost => service://proxy:80
+            - HTTPS: https://localhost => service://proxy:443
 
 ### Launch browserless server
 ```bash
 # Build up docker containers
 $ ./x build
 
-# Launch docker containers: launch browserless server
-$ ./x up -d
+# Launch `node` docker container: launch browserless server
+$ ./x up -d node
 
 # => Browserless server: http://localhost:{NODE_PORT:-8099}
 ```
@@ -82,4 +92,21 @@ const {chromium} = require('playwright');
   });
   browser.close();
 })();
+```
+
+### 本番サーバで運用したい場合
+```bash
+# Set stage => production
+$ ./x set-stage production
+
+# Set domain => yourserver.com
+$ ./x set-domain yourserver.com
+
+# Launch all docker container: launch browserless server with nginx proxy server
+$ ./x up -d
+
+# Confirm `proxy` docker container: process of Let's Encrypt
+$ ./x logs -f proxy
+
+# => https://yourserver.com ~> http://node:8099
 ```
